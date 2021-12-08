@@ -1,0 +1,4 @@
+# example config
+prefixFilter: "pvc-prefix"
+namespace: "my-namespace"
+sufixFilter: ""

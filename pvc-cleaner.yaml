@@ -1,0 +1,93 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pvc-cleaner-config
+  namespace: kube-system
+data:
+  config.yaml: |
+    prefixFilter: "my-prefix"
+    namespace: "my-namespace"
+    sufixFilter: ""
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pvc-cleaner
+  namespace: kube-system
+  labels:
+    app: pvc-cleaner
+spec:
+  schedule: "1 * * * *" # every hour on minute 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: pvc-cleaner-account
+          containers:
+          - name: pvc-cleaner
+            image: auyer/pvc-cleaner
+            imagePullPolicy: Always
+            securityContext:
+              privileged: true
+            resources:
+              requests:
+                cpu: 100m
+                memory: 100Mi
+              limits:
+                cpu: 100m
+                memory: 100Mi
+            command:
+            - /app/main
+            - -c 
+            - /config/config.yaml
+            volumeMounts:
+            - name: pvc-cleaner-config-mount
+              mountPath: /config/
+          volumes:
+            - name: pvc-cleaner-config-mount
+              configMap:
+                name: pvc-cleaner-config
+          restartPolicy: OnFailure
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pvc-cleaner-account
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: pvc-cleaner-cluster-role
+rules:
+- apiGroups: [""]
+  resources:
+  - persistentvolumeclaims
+  - persistentvolumeclaims/status
+  verbs: ["list", "get", "update", "patch", "delete", "watch"]
+- apiGroups: [""]
+  resources:
+  - nodes
+  - persistentvolumes
+  - pods
+  - namespaces
+  verbs: ["list", "get", "watch"]
+- apiGroups: ["storage.k8s.io"]
+  resources:
+  - storageclasses
+  verbs: ["list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: pvc-cleaner-cluster-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: pvc-cleaner-cluster-role
+subjects:
+  - kind: ServiceAccount
+    name: pvc-cleaner-account
+    namespace: kube-system
