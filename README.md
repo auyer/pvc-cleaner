@@ -14,9 +14,9 @@ metadata:
   namespace: kube-system
 data:
   config.yaml: |
-    namespace: "my-namespace"       <- set this to use a sufix filter
+    namespace: "my-namespace"       <- set this to chose a namespace (all by default)
     prefixFilter: "my-prefix"       <- set this to use a prefix filter
-    sufixFilter: ""                 <- set this to chose a namespace (all by default)
+    sufixFilter: ""                 <- set this to use a sufix filter
 ...
 ```
 
